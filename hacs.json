@@ -1,0 +1,6 @@
+{
+  "name": "Xiaomi P3 Humidifier Card",
+  "filename": "xiaomi-p3-humidifier-card.js",
+  "render_readme": true,
+  "homeassistant": "2024.8.0"
+}

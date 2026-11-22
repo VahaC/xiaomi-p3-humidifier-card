@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Xiaomi P3 Humidifier Card demo</title>
+    <style>
+      :root {
+        --primary-color: #03a9f4;
+        --primary-text-color: #212121;
+        --secondary-text-color: #727272;
+        --divider-color: rgba(0, 0, 0, 0.12);
+        --card-background-color: #fff;
+        --warning-color: #ffa600;
+        --page: #f1f3f6;
+      }
+      :root.dark {
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9b9b9b;
+        --divider-color: rgba(255, 255, 255, 0.14);
+        --card-background-color: #1c1c1e;
+        --page: #111;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        background: var(--page);
+        color: var(--primary-text-color);
+        font-family: Roboto, 'Segoe UI', sans-serif;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-size: 13px;
+      }
+      .toolbar button {
+        padding: 6px 12px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
+        color: inherit;
+        cursor: pointer;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 380px));
+        gap: 20px;
+        align-items: start;
+      }
+      h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--secondary-text-color);
+      }
+      ha-card {
+        display: block;
+        border: 1px solid var(--divider-color);
+        border-radius: 12px;
+        background: var(--card-background-color);
+      }
+      #log {
+        margin-top: 20px;
+        font: 12px/1.5 ui-monospace, Consolas, monospace;
+        color: var(--secondary-text-color);
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <span>Simulate</span>
+      <button data-sim="fan">Fan only</button>
+      <button data-sim="water">Low water</button>
+      <button data-sim="tick">Clean −1 min</button>
+      <label>Humidity <input id="hum" type="range" min="20" max="80" value="35" /></label>
+      <button data-sim="theme">Dark / light</button>
+      <button data-sim="lang">EN / UK</button>
+    </div>
+    <div class="grid">
+      <div><h3>layout: ring</h3><xiaomi-p3-humidifier-card data-layout="ring"></xiaomi-p3-humidifier-card></div>
+      <div><h3>layout: compact</h3><xiaomi-p3-humidifier-card data-layout="compact"></xiaomi-p3-humidifier-card></div>
+      <div><h3>layout: tank</h3><xiaomi-p3-humidifier-card data-layout="tank"></xiaomi-p3-humidifier-card></div>
+    </div>
+    <div id="log"></div>
+
+    <script type="module">
+      import '../dist/xiaomi-p3-humidifier-card.js';
+
+      // Stand-in for Home Assistant's own <ha-card>.
+      customElements.define('ha-card', class extends HTMLElement {});
+
+      const H = 'humidifier.xiaomi_p3_10fb_humidifier';
+      const SW = 'switch.xiaomi_p3_10fb_switch_status';
+      const ent = (entity_id, state, attributes = {}) => ({ entity_id, state, attributes });
+      let states = {
+        [H]: ent(H, 'on', {
+          friendly_name: 'Xiaomi Humidifier P3 Humidifier',
+          current_humidity: 35,
+          humidity: 70,
+          min_humidity: 40,
+          max_humidity: 70,
+          mode: 'Strong',
+        }),
+        [SW]: ent(SW, 'on'),
+        'sensor.p3_fan_dry_time': ent('sensor.p3_fan_dry_time', '0'),
+        'input_boolean.p3_clean_loop': ent('input_boolean.p3_clean_loop', 'off'),
+        'input_select.p3_clean_mode': ent('input_select.p3_clean_mode', 'Sleep'),
+        'sensor.p3_water_status': ent('sensor.p3_water_status', 'Normal'),
+        'sensor.xiaomi_p3_10fb_filter_life_level': ent('sensor.xiaomi_p3_10fb_filter_life_level', '11'),
+        'switch.xiaomi_p3_10fb_physical_control_locked': ent('switch.xiaomi_p3_10fb_physical_control_locked', 'off'),
+        'switch.xiaomi_p3_10fb_switch_status_2': ent('switch.xiaomi_p3_10fb_switch_status_2', 'on'),
+      };
+      for (const s of ['clean_stop', 'mode_constant', 'mode_sleep', 'mode_strong', 'clean_start_sleep', 'clean_start_strong']) {
+        states[`script.p3_${s}`] = ent(`script.p3_${s}`, 'off');
+      }
+
+      const set = (id, state, attrs) => {
+        const old = states[id];
+        states = {
+          ...states,
+          [id]: { ...old, state: state ?? old.state, attributes: { ...old.attributes, ...attrs } },
+        };
+      };
+
+      const scripts = {
+        'script.p3_clean_stop': () => {
+          set('input_boolean.p3_clean_loop', 'off');
+          set('sensor.p3_fan_dry_time', '0');
+          set(H, 'off');
+        },
+        'script.p3_mode_constant': () => mode('Constant Humidity'),
+        'script.p3_mode_sleep': () => mode('Sleep'),
+        'script.p3_mode_strong': () => mode('Strong'),
+        'script.p3_clean_start_sleep': () => clean('Sleep'),
+        'script.p3_clean_start_strong': () => clean('Strong'),
+      };
+      function mode(name) {
+        set('input_boolean.p3_clean_loop', 'off');
+        set(SW, 'on');
+        set(H, 'on', { mode: name });
+      }
+      function clean(name) {
+        set('input_boolean.p3_clean_loop', 'on');
+        set('input_select.p3_clean_mode', name);
+        set('sensor.p3_fan_dry_time', '12');
+        set(SW, 'off');
+        set(H, 'on');
+      }
+
+      let language = 'en';
+      const log = document.getElementById('log');
+      const cards = [...document.querySelectorAll('xiaomi-p3-humidifier-card')];
+      const push = () => {
+        const hass = {
+          states,
+          locale: { language },
+          callService: async (domain, service, data) => {
+            log.textContent = `${domain}.${service} ${JSON.stringify(data)}\n` + log.textContent;
+            const id = data.entity_id;
+            if (domain === 'script') scripts[id]?.();
+            else if (service === 'toggle') set(id, states[id].state === 'on' ? 'off' : 'on');
+            else if (service === 'set_humidity') set(id, undefined, { humidity: data.humidity });
+            else if (service === 'turn_off') set(id, 'off');
+            else if (service === 'turn_on') set(id, 'on');
+            else if (service === 'set_mode') set(id, undefined, { mode: data.mode });
+            setTimeout(push, 150);
+          },
+        };
+        cards.forEach((card) => (card.hass = hass));
+      };
+
+      const Card = customElements.get('xiaomi-p3-humidifier-card');
+      const stub = Card.getStubConfig({ states });
+      cards.forEach((card) =>
+        card.setConfig({
+          type: 'custom:xiaomi-p3-humidifier-card',
+          ...stub,
+          name: 'Xiaomi Humidifier P3',
+          layout: card.dataset.layout,
+        }),
+      );
+      push();
+
+      document.querySelector('.toolbar').addEventListener('click', (ev) => {
+        switch (ev.target.dataset?.sim) {
+          case 'fan':
+            set('input_boolean.p3_clean_loop', 'off');
+            set(SW, 'off');
+            set(H, 'on');
+            break;
+          case 'water':
+            set('sensor.p3_water_status', states['sensor.p3_water_status'].state === 'Normal' ? 'Low' : 'Normal');
+            break;
+          case 'tick':
+            set('sensor.p3_fan_dry_time', String(Math.max(0, Number(states['sensor.p3_fan_dry_time'].state) - 1)));
+            break;
+          case 'theme':
+            document.documentElement.classList.toggle('dark');
+            return;
+          case 'lang':
+            language = language === 'en' ? 'uk' : 'en';
+            break;
+          default:
+            return;
+        }
+        push();
+      });
+      document.getElementById('hum').addEventListener('input', (ev) => {
+        set(H, undefined, { current_humidity: Number(ev.target.value) });
+        push();
+      });
+    </script>
+  </body>
+</html>
