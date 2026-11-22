@@ -62,6 +62,11 @@
         border-radius: 12px;
         background: var(--card-background-color);
       }
+      /* `?shot` hides the controls for README screenshots. */
+      .shot .toolbar,
+      .shot #log {
+        display: none;
+      }
       #log {
         margin-top: 20px;
         font: 12px/1.5 ui-monospace, Consolas, monospace;
@@ -89,6 +94,10 @@
 
     <script type="module">
       import '../dist/xiaomi-p3-humidifier-card.js';
+
+      if (new URLSearchParams(location.search).has('shot')) {
+        document.documentElement.classList.add('shot');
+      }
 
       // Stand-in for Home Assistant's own <ha-card>.
       customElements.define('ha-card', class extends HTMLElement {});

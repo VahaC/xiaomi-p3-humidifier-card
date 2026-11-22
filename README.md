@@ -3,6 +3,8 @@
 A Home Assistant dashboard card for the Xiaomi Humidifier P3. One card replaces a stack of
 `mod-card`, Mushroom, `button-card`, `config-template-card` and `slider-entity-row`.
 
+![Ring, compact and tank layouts](docs/preview.png)
+
 - Three layouts, switchable in the card settings: **ring**, **compact** and **tank**.
 - Colour follows the device state: grey (off), blue (humidifying), green (fan only), purple (clean loop).
 - Mode buttons: Off, Constant, Sleep, Strong, plus optional Clean sleep / Clean strong with the minutes left.
