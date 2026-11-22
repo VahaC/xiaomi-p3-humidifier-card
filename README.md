@@ -18,6 +18,12 @@ It works with any `humidifier` entity. The clean loop, chips and scripts are opt
 
 ### HACS (recommended)
 
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=VahaC&repository=xiaomi-p3-humidifier-card&category=plugin)
+
+Press the button, confirm adding the repository, then press **Download** and reload the browser page.
+
+Or add it by hand:
+
 1. Open HACS, then the menu in the top right corner, then **Custom repositories**.
 2. Add `https://github.com/VahaC/xiaomi-p3-humidifier-card` with the type **Dashboard**.
 3. Find **Xiaomi P3 Humidifier Card** in HACS and press **Download**.
